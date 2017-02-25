@@ -46,7 +46,7 @@ $(document).ready(function() {
         $('#connect').text('Connect to Put.io')
         $('#token_input').val('');
     });
-    
+
     $(document.body).on('click', '#hide_badge' ,function(e){
         if($('#hide_badge').prop('checked'))
             localStorage["hide_badge"]="yes";
@@ -55,7 +55,7 @@ $(document).ready(function() {
 
         _gaq.push(['_trackEvent', 'background', 'hide_badge', localStorage["hide_badge"]]);
     });
-    
+
     $(document.body).on('click', '#ask_save' ,function(e){
         if($('#ask_save').prop('checked'))
             localStorage["ask_save"]="yes";

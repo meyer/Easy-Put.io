@@ -19,11 +19,9 @@ Putio_Function = {
         today=today.getTime();
 
         if (!localStorage["date_check_version"] ){
-            _gaq.push(['_trackEvent', 'version', localStorage["version"]]);
             localStorage["date_check_version"]=today;
         }
         else if(today!=localStorage["date_check_version"]){
-            _gaq.push(['_trackEvent', 'version', localStorage["version"]]);
             localStorage["date_check_version"]=today;
         }
     },
@@ -33,7 +31,7 @@ Putio_Function = {
             if (data.url){
                 Putio_Function.download(data.url);
             }
-                
+
 
             else{
                 setTimeout(function () {
@@ -44,33 +42,57 @@ Putio_Function = {
     },
 
     copy_links : function(download_links,link_element,color){
-        background=chrome.extension.getBackgroundPage();
-        background.Background.copyToClipboard(download_links);
-        link_element.css('color',color);
-    },
-
-    donate : function(){
-        var content='';
-        content+='<div style="margin-top:60px;">';
-        content+='<p class="text-center"><button class="btn btn-lg btn-primary" id="get_full_extension" type="button" style="margin-right:10px;">Get Full Extension</button><button class="btn btn-lg btn-primary" id="donate_btn" type="button">Buy Me a Beer</button></p>';
-        content+='</div>';
-        $("#tab_donate").html(content);
+        Putio.Account.settings(function(data){
+            if (data.settings.routing != localStorage['default_routing']){
+                Putio.Account.change_route(localStorage['default_routing'],function(data){
+                    background=chrome.extension.getBackgroundPage();
+                    background.Background.copyToClipboard(download_links);
+                    link_element.css('color',color);
+                })
+            }
+            else{
+                background=chrome.extension.getBackgroundPage();
+                background.Background.copyToClipboard(download_links);
+                link_element.css('color',color);
+            }
+        })
     },
 
     download : function(download_url){
         Storage.getData(function(storage){
             var ACCESS_TOKEN = storage["putio_token"];
-            if(localStorage["ask_save"]=="yes"){
-                chrome.downloads.download({
-                url:download_url+"?oauth_token="+ACCESS_TOKEN,saveAs:!0},function(){})
+
+            Putio.Account.settings(function(data){
+                if (data.settings.routing != localStorage['default_routing']){
+                    Putio.Account.change_route(localStorage['default_routing'],function(data){
+
+                        if(localStorage["ask_save"]=="yes"){
+                            chrome.downloads.download({
+                            url:download_url+"?oauth_token="+ACCESS_TOKEN,saveAs:!0},function(){})
+                        }
+                        else{
+                            chrome.tabs.getSelected(undefined,function(data){
+                                chrome.tabs.update(data.id, {
+                                    url:download_url+"?oauth_token="+ACCESS_TOKEN
+                                });
+                            });
+                        }
+                    })
+                }
+                else{
+                    if(localStorage["ask_save"]=="yes"){
+                        chrome.downloads.download({
+                        url:download_url+"?oauth_token="+ACCESS_TOKEN,saveAs:!0},function(){})
+                    }
+                    else{
+                        chrome.tabs.getSelected(undefined,function(data){
+                            chrome.tabs.update(data.id, {
+                                url:download_url+"?oauth_token="+ACCESS_TOKEN
+                            });
+                        });
+                    }
             }
-            else{
-                chrome.tabs.getSelected(undefined,function(data){
-                    chrome.tabs.update(data.id, {
-                        url:download_url+"?oauth_token="+ACCESS_TOKEN
-                    });
-                });
-            }
+            })
         })
     },
 
@@ -82,30 +104,278 @@ Putio_Function = {
         })
     },
 
-    listFolder:function(padding, folder_id, select, callback){
+    displayPbResult : function(result,old){
+        var content='';
 
-        if(Putio_Function.folderList != undefined){
-            $(select).html(Putio_Function.folderList)
-            callback('done');
+        if (result.error){
+            content+='<div class="alert alert-danger"><h4>Sorry!</h4>';
+            content+=result.status+' '+result.statusText+'<div>';
         }
+        else if(result.length>0){
+            content+='<table class="table-condensed table-striped" id="result_list">';
+            content+='<thead>';
+            content+='<tr class="text-left">';
+            content+='<th style="width: 11%">';
+            content+='Category';
+            content+='</th>';
+            content+='<th style="width: 12%">';
+            content+='Size';
+            content+='</th>';
+            content+='<th style="width: 57%">';
+            content+='Name';
+            content+='</th>';
+            content+='<th style="width: 11%">';
+            content+='Age';
+            content+='</th>';
+            content+='<th style="width: 9%">';
+            content+='Seeders';
+            content+='</th>';
+            content+='</thead>';
+            content+='<tbody>';
 
+             $.each(result,function(index, value){
+                if(value.category.indexOf("HD")!=-1)
+                    value.category='HD'
+
+                value.size=value.size.replace("i","");
+
+                content+='<tr class="send_to_putio" from="PB" magnet="'+value.magnet+'">';
+                content+='<td>';
+                content+=value.category;
+                content+='</td>';
+                content+='<td>';
+                content+=value.size;
+                content+='</td>';
+                content+='<td>';
+                content+='<strong>'+value.name+'</strong>';
+                content+='</td>';
+                content+='<td>';
+                content+=Putio_Function.pirateBayTimeToDuration(value.uploaded);
+                content+='</td>';
+                content+='<td>';
+                content+=value.seeders;
+                content+='</td>';
+                content+='</tr>';
+             })
+
+
+            content+='</tbody>';
+            content+='</table>';
+        }
         else{
-            Putio_Function.count++;
-            Putio.Files.list(folder_id,function(data){
-                var files=data.files;
-                $.each(files,function(index, value){
-                    if (value.content_type=='application/x-directory' && !value.is_shared){
-                        //$("#folder_id").append('<option value="'+value.id+'">'+padding+value.name+'</option>');
-                        $('<option value="'+value.id+'">'+padding+value.name+'</option>').insertAfter(select+" option[value='"+folder_id+"']");
-                        Putio_Function.listFolder(padding+'&nbsp;&nbsp;&nbsp;',value.id,select,callback);
-
-                    }
-                })
-                Putio_Function.count--;
-                if (Putio_Function.count == 0 && callback)
-                    callback('done');
-            })
+            content+='<div class="alert alert-warning"><h4>Nothing found!</h4>';
+            content+='Your search "'+Piratebay.query+'" did not match any documents.<div>';
         }
+        if(old==true)
+            $("#old_pb_result").html(content);
+        else
+            $("#pb_result").html(content);
+    },
+
+    displayKatResult : function(result){
+        var content='';
+
+        if (result.error){
+            content+='<div class="alert alert-danger"><h4>Sorry!</h4>';
+            content+=result.status+' '+result.statusText+'<div>';
+        }
+        else if(result.channel && result.channel.item.length>0){
+            content+='<table class="table-condensed table-striped" id="result_list">';
+            content+='<thead>';
+            content+='<tr class="text-left">';
+            content+='<th style="width: 11%">';
+            content+='Category';
+            content+='</th>';
+            content+='<th style="width: 12%">';
+            content+='Size';
+            content+='</th>';
+            content+='<th style="width: 57%">';
+            content+='Name';
+            content+='</th>';
+            content+='<th style="width: 11%">';
+            content+='Age';
+            content+='</th>';
+            content+='<th style="width: 9%">';
+            content+='Seeders';
+            content+='</th>';
+            content+='</thead>';
+            content+='<tbody>';
+
+             $.each(result.channel.item,function(index, value){
+                var today = new Date();
+                var pubDate= new Date(value.pubDate)
+                var secondDifference = today - new Date(value.pubDate);
+
+                pubDate = Putio_Function.millisecondsToString(secondDifference)
+
+                category=value.category.split(">")
+
+                content+='<tr class="send_to_putio" from="KAT" magnet="'+value.magnetURI+'">';
+                content+='<td>';
+                content+=category[0];
+                content+='</td>';
+                content+='<td>';
+                content+=Putio_Function.bytesToSize(value.contentLength,2);
+                content+='</td>';
+                content+='<td>';
+                content+='<strong>'+value.title+'</strong>';
+                content+='</td>';
+                content+='<td>';
+                content+=pubDate;
+                content+='</td>';
+                content+='<td>';
+                content+=value.seeds;
+                content+='</td>';
+                content+='</tr>';
+             })
+
+
+            content+='</tbody>';
+            content+='</table>';
+        }
+        else{
+            content+='<div class="alert alert-warning"><h4>Nothing found!</h4>';
+            content+='Your search "'+Kickasstorrents.query+'" did not match any documents.<div>';
+        }
+        $("#kat_result").html(content);
+    },
+
+    displayLastMovies : function(result){
+
+        //console.log(result);
+        //console.log(result.data);
+        //console.log(result.data.movies);
+
+        var content='';
+        if (result.error){
+            content+='<div class="alert alert-danger"><h4>Sorry!</h4>';
+            content+=result.status+' '+result.statusText+'<div>';
+        }
+        else if(result.data.movies.length>0){
+
+            Yify.page=parseInt(Yify.page)
+
+            content+='<table class="table-condensed table-striped" id="last_movies_list">';
+
+            content+='<thead>';
+            content+='<tr>';
+            content+='<th colspan="4" class="text-left">';
+            content+='<div id="powered_by" >Powered by <span id="go_to_yify">YIFY Torrents</span></div>';
+            content+='<ul class="pagination pagination-xs">';
+
+            content+='</ul>';
+            content+='</th>';
+            content+='</thead>';
+
+            content+='<tfoot>';
+            content+='<tr>';
+            content+='<th colspan="4" class="text-right">';
+            content+='<ul class="pagination pagination-xs">';
+            content+='</ul>';
+            content+='</th>';
+            content+='</tfoot>';
+
+            content+='<tbody>';
+             $.each(result.data.movies,function(index, value){
+                downloadButtons = "";
+                torrentsInfo = "";
+                genres = "";
+
+                if(value.genres){
+                    $.each(value.genres,function(genreIndex, genreValue){
+                        genres+=genreValue+' / ';
+                    })
+                    genres = genres.substring(0, genres.length-3);
+                }
+                if(value.torrents){
+                    $.each(value.torrents,function(torrentIndex, torrentValue){
+                        downloadButtons+='<button html="true" data-toggle="tooltip" data-placement="top" title="" data-original-title="Size: '+torrentValue.size+'\nPeers: '+torrentValue.peers+'\nSeeds: '+torrentValue.seeds+'" class="btn btn-default btn-xs send_to_putio" from="YIFY" type="button" magnet="'+torrentValue.url+'">'+torrentValue.quality+'</button>';
+                    })
+                }
+
+                info='<td class="%myclass%" style="width: 17%">';
+                info+='<img src="'+value.medium_cover_image+'" imdb_id="'+value.imdb_code+'" class="thumbnail_yify"/>';
+                info+='</td>';
+                info+='<td class="%myclass%" style="width: 33%">';
+                info+='<h5><strong>'+value.title_long+'</strong></h5>';
+                info+='<strong>Genre: </strong>'+genres+'</br>';
+                info+='<img src="img/logo-imdb.svg" class="show_on_imdb" url="http://www.imdb.com/title/'+value.imdb_code+'/" > : '+value.rating+'</br>';
+                info+=downloadButtons;
+                info+='</td>';
+
+                if(index%2==0){
+                    content+='<tr>';
+                    info=info.replace(/%myclass%/g,"first");
+                    content+=info;
+                }
+                else if(index%2==1){
+                    info=info.replace(/%myclass%/g,"second");
+                    content+=info;
+                    content+='</tr>';
+                }
+
+             })
+            content+='</tbody>';
+            content+='</table>';
+        }
+        $("#yify_result").html(content);
+        $('[data-toggle="tooltip"]').tooltip({'delay': { show: 200, hide: 200 }});
+        $(".pagination").pagination({
+            items: result.data.movie_count,
+            itemsOnPage: 20,
+            displayedPages:5,
+            edges:1,
+            currentPage : Yify.page,
+            prevText :"&laquo;",
+            nextText :"&raquo;",
+            selectOnClick:false
+        });
+    },
+
+    displaySubtitleResult : function(result){
+        var content='';
+        if (result.error){
+            content+='<div class="alert alert-danger"><h4>Sorry!</h4>';
+            content+=result.status+' '+result.statusText+'<div>';
+        }
+        else if(result.data){
+            content+='<table class="table-condensed table-striped" id="subtitle_result_list">';
+            content+='<thead>';
+            content+='<tr class="text-left">';
+            content+='<th width="14%">';
+            content+='Language';
+            content+='</th>';
+            content+='<th width="86%">';
+            content+='Name';
+            content+='</th>';
+            content+='</thead>';
+            content+='<tbody>';
+
+             $.each(result.data,function(index, value){
+                content+='<tr class="download_subtitle" url="'+value.ZipDownloadLink+'">';
+                content+='<td>';
+                content+=value.LanguageName;
+                content+='</td>';
+                content+='<td>';
+                content+='<strong>'+value.SubFileName+'</strong>';
+                content+='</td>';
+            })
+
+        }
+        else{
+            content+='<div class="alert alert-warning"><h4>Nothing found!</h4>';
+            content+='Your search "'+Opensubtitles.query+'" did not match any documents.<div>';
+        }
+        $("#os_result").html(content);
+    },
+
+    go : function(tab_name, folder_id){
+            $("#content").html('');
+            clearTimeout(this.time);
+            $("#menu li").attr('class','');
+            $('#'+tab_name).parent('li').attr('class','active');
+            localStorage["tabName"] = tab_name;
+            this.loadTabContent(tab_name,folder_id);
     },
 
     getDefaultFolderData : function(callback){
@@ -125,14 +395,38 @@ Putio_Function = {
         })
     },
 
-    go : function(tab_name, folder_id){
-            $("#content").html('');
-            clearTimeout(this.time);
-            $("#menu li").attr('class','');
-            $('#'+tab_name).parent('li').attr('class','active');
-            if(tab_name!="donate")
-                localStorage["tabName"] = tab_name;
-            this.loadTabContent(tab_name,folder_id);
+    getDefaultFolderToDisplay : function(){
+        if($("#search_category").val()=="kickasstorrents" || $("#search_category").val()=="piratebay"){
+            switch($('input:radio[name=search_filter]:checked').val()){
+                case "all":
+                    folder="default_folder_id";
+                break;
+                case "movies":
+                    folder="default_movies_folder_id";
+                break;
+                case "tvshows":
+                    folder="default_tvshows_folder_id";
+                break;
+                case "music":
+                    folder="default_music_folder_id";
+                break;
+                case "games":
+                    folder="default_games_folder_id";
+                break;
+                case "applications":
+                    folder="default_applications_folder_id";
+                break;
+                default:
+
+                break
+            }
+        }
+
+        else{
+            folder="default_folder_id";
+        }
+
+        return folder;
     },
 
     goToFolder : function(id){
@@ -211,6 +505,9 @@ Putio_Function = {
                     content+='</td>';
                     content+='<td>';
                     content+='<a class="rename" data-toggle="tooltip" data-placement="left" title="" data-original-title="Rename" value="'+value.id+'" href="#"><span class="glyphicon glyphicon-edit"></span></a>';
+                    if(value.opensubtitles_hash){
+                       content+='<a class="search_subtile" data-toggle="tooltip" data-placement="left" title="" data-original-title="Subtitles" value="'+value.id+'" hash="'+value.opensubtitles_hash+'" size="'+value.size+'" href="#"><span class="glyphicon glyphicon-search"></span></a>';
+                    }
                     content+='</td>';
                     content+='</tr>';
                 });
@@ -221,7 +518,7 @@ Putio_Function = {
                 $("#tab_files").html(content);
                 $('[data-toggle="tooltip"]').tooltip({'delay': { show: 1500, hide: 200 }});
             }
-            
+
         });
     },
 
@@ -271,8 +568,33 @@ Putio_Function = {
         });
     },
 
+    listFolder:function(padding, folder_id, select, callback){
+
+        if(Putio_Function.folderList != undefined){
+            $(select).html(Putio_Function.folderList)
+            callback('done');
+        }
+
+        else{
+            Putio_Function.count++;
+            Putio.Files.list(folder_id,function(data){
+                var files=data.files;
+                $.each(files,function(index, value){
+                    if (value.content_type=='application/x-directory' && !value.is_shared){
+                        //$("#folder_id").append('<option value="'+value.id+'">'+padding+value.name+'</option>');
+                        $('<option value="'+value.id+'">'+padding+value.name+'</option>').insertAfter(select+" option[value='"+folder_id+"']");
+                        Putio_Function.listFolder(padding+'&nbsp;&nbsp;&nbsp;',value.id,select,callback);
+
+                    }
+                })
+                Putio_Function.count--;
+                if (Putio_Function.count == 0 && callback)
+                    callback('done');
+            })
+        }
+    },
+
     loadTabContent:function (tabName, folder_id){
-        _gaq.push(['_trackPageview', tabName]);
         switch (tabName) {
             case 'files':
                 $("#content").html('<div id="tab_files"></div>');
@@ -285,13 +607,16 @@ Putio_Function = {
                 $("#content").html('<div id="tab_transfers"></div>');
                 this.transfersList();
                 break;
-            case 'donate':
-                //url='https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=CX9H4LRJD2QUJ&lc=US&item_name=Easy%20Put%2eio&currency_code=USD&bn=PP%2dDonationsBF%3abtn_donateCC_LG%2egif%3aNonHosted';
-                /*chrome.tabs.create({
-                    url:url
-                });*/
-                $("#content").html('<div id="tab_donate"></div>');
-                this.donate();
+            case 'search':
+                $("#content").html('<div id="tab_search"></div>');
+                if(!localStorage["kat_url"])
+                    localStorage["kat_url"]="https://kat.cr"
+                if(!localStorage["pb_url"])
+                    localStorage["pb_url"]="https://thepiratebay.vg"
+                this.search(function(data){
+                    $("#send_link").focus()
+                    $("#search_title").focus()
+                });
                 break;
             default:
                 break;
@@ -336,7 +661,7 @@ Putio_Function = {
         }
         else if(seconds>1){
             return seconds+" seconds"
-        } 
+        }
     },
 
     pirateBayTimeToDuration:function(time){
@@ -478,6 +803,89 @@ Putio_Function = {
       return '';
     },
 
+    search : function(callback){
+
+        if(!localStorage["searchCategory"]){
+            localStorage["searchCategory"]='kickasstorrents';
+        }
+
+        if(!localStorage["searchFilter"]){
+            localStorage["searchFilter"]='all';
+        }
+
+        if(localStorage["searchCategory"]=='opensubtitle'){
+            placeholder="Search on OpenSubtitles";
+            buttonText="Search"
+            textareaStyle="none";
+            inputStyle="inline-block";
+        }
+        else if(localStorage["searchCategory"]=='piratebay'){
+            placeholder="Search on The Pirate Bay";
+            buttonText="Search"
+            textareaStyle="none";
+            inputStyle="inline-block";
+        }
+        else if(localStorage["searchCategory"]=='kickasstorrents'){
+            placeholder="Search on KickassTorrents";
+            buttonText="Search"
+            textareaStyle="none";
+            inputStyle="inline-block";
+        }
+        else if(localStorage["searchCategory"]=='torrent_link'){
+            placeholder="";
+            buttonText="Fetch"
+            textareaStyle="inline-block";
+            inputStyle="disabled";
+        }
+        else{
+            localStorage["searchCategory"]='kickasstorrents';
+            placeholder="Search on KickassTorrents";
+            buttonText="Search";
+            textareaStyle="none";
+            inputStyle="inline-block";
+        }
+
+        var content='';
+
+        content+='<div class="form-inline" id="search_form">';
+
+        content+='<select id="search_category" class="select form-control">';
+        content+='<option value="kickasstorrents" >KAT</option>';
+        content+='<option value="piratebay" >TPB</option>';
+        content+='<option value="opensubtitle" >OS</option>';
+        content+='<option value="torrent_link" >Links</option>';
+        content+='</select>';
+
+        content+='<input type="text" class="form-control" id="search_title" placeholder="'+placeholder+'">';
+
+        content+='<button class="btn btn-primary" id="submit_search">'+buttonText+'</button>';
+        content+='<button class="btn btn-default" id="last_movies_button" set="1">Latest Movies</button>';
+
+        content+='<br><textarea rows="3" class="form-control" cols="50" id="send_link" placeholder="Add new files to Put.io" style="display:'+textareaStyle+';"></textarea>';
+        content+='<div id="filter"><label class="radio"><input type="radio" name="search_filter" class="search_filter" value="all" checked>All</label>';
+        content+='<label class="radio"><input type="radio" name="search_filter" class="search_filter" value="movies">Movies</label>';
+        content+='<label class="radio"><input type="radio" name="search_filter" class="search_filter" value="tvshows">TV Shows</label>';
+        content+='<label class="radio"><input type="radio" name="search_filter" class="search_filter" value="music">Music</label>';
+        content+='<label class="radio"><input type="radio" name="search_filter" class="search_filter" value="games">Games</label>';
+        content+='<label class="radio"><input type="radio" name="search_filter" class="search_filter" value="applications">Applications</label>';
+        content+='</div><div id="options"><strong><a data-toggle="tooltip" data-placement="right" title="" data-original-title="Change" href="#" id="select_default_url">Options</a></strong>';
+        content+=' | <strong><a data-toggle="tooltip" data-placement="right" title="" data-original-title="Buy Me a Beer" href="#" id="donate">Buy Me a Beer</a></strong></div>';
+        content+='</div>';
+        content+='<div id="search_result">';
+        content+='</div>';
+
+        $("#tab_search").html(content);
+        $("#search_category").val(localStorage["searchCategory"])
+        $("input:radio[value="+localStorage["searchFilter"]+"]").prop('checked', true);
+        if (!localStorage["default_subtitle_code"] || localStorage["default_subtitle_code"]=="null")localStorage["default_subtitle_code"]='eng';
+        $("#options").append(' | Subtitle In <strong><a href="#" data-toggle="tooltip" data-placement="right" title="" data-original-title="Change" id="select_default_language">'+VAR_LANGUAGES[localStorage["default_subtitle_code"]]+'</a></strong>');
+        if(localStorage["searchCategory"]=='opensubtitle' || localStorage["searchCategory"]=='torrent_link'){
+            $(".search_filter").prop('disabled', true);
+        }
+        Putio_Function.getDefaultFolderData();
+        callback(true)
+    },
+
     transfersList : function(){
         Putio.Transfers.list(function(data){
             var content='';
@@ -535,7 +943,7 @@ Putio_Function = {
                     content+=value.status_message;
                     content+='</span>';
                     content+='<span class="edit_transfer">';
-                    
+
                     content+='</span>';
                     //content+='<div class="bar" style="width: '+parseInt(value.percent_done)+'%">';
                     content+='<div class="progress-bar '+type+'" role="progressbar" aria-valuenow="'+parseInt(value.percent_done)+'" aria-valuemin="0" aria-valuemax="100" style="width: '+parseInt(value.percent_done)+'%">';
@@ -586,4 +994,5 @@ Putio_Function = {
             })
         }
     }
+
 }

@@ -10,6 +10,13 @@
         <script type="text/javascript" src="js/storage.js"></script>
         <script type="text/javascript" src="js/function.js"></script>
         <script type="text/javascript" src="js/putio.js"></script>
+        <script type="text/javascript" src="js/piratebay.js"></script>
+        <script type="text/javascript" src="js/old_piratebay.js"></script>
+        <script type="text/javascript" src="js/kickasstorrents.js"></script>
+        <script type="text/javascript" src="js/yify.js"></script>
+        <script type="text/javascript" src="js/opensubtitles.js"></script>
+        <script type="text/javascript" src="js/jquery.xml2json.js"></script>
+        <script type="text/javascript" src="js/jquery.xmlrpc.min.js"></script>
         <script type="text/javascript" src="js/jquery.simplePagination.js"></script>
         <script type="text/javascript" src="js/tracking.js"></script>
         <script type="text/javascript" src="js/language.js"></script>
@@ -20,14 +27,14 @@
             <li id="logo">
                 <img src="img/putio128.png">
             </li>
+            <li class="active">
+                <a id="search" href="#">Search</a>
+            </li>
             <li >
                 <a id="files" href="#">Files</a>
             </li>
             <li>
                 <a id="transfers" href="#">Transfers</a>
-            </li>
-            <li>
-                <a id="donate" href="#">More</a>
             </li>
             <li>
                 <img id="spinner" src="img/spinner.gif">
@@ -82,6 +89,120 @@
                     </div>
                 </div>
             </div>
+        </div>
+        <div id="defaultUrlModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="alert alert-block alert-info fade in " id="clean_alert">
+                        <button type="button" class="close" data-dismiss="modal">&times;</button>
+                        <p><h4 class="alert-heading">Options</h4></p>
+
+                        <form class="form-horizontal" role="form">
+                            <div class="form-group">
+                                <label class="control-label col-xs-3" for"pb_url">The Pirate Bay : </label>
+                                <div class="col-xs-6">
+                                    <input type="text" class="form-control" id="pb_url" placeholder="E.g : https://thepiratebay.vg">
+                                </div>
+                                <input id="old_api" type="checkbox"> Use old API
+                            </div>
+                            <div class="form-group">
+                                <label class="control-label col-xs-3" for"kat_url">KickassTorrents : </label>
+                                <div class="col-xs-6">
+                                    <input type="text" class="form-control" id="kat_url" placeholder="E.g : https://kat.cr">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="control-label col-xs-3" for"routing">Route : </label>
+                                <div class="col-xs-6">
+                                    <select class="routing_list form-control" id="routing"></select>
+                                </div>
+                            </div>
+                        </form>
+                        <p>
+                          <a class="btn btn-primary yes" type="default_url" href="#">Save</a> <a class="btn btn-default" href="#" data-dismiss="modal">Cancel</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="defaultFolderModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="alert alert-block alert-info fade in " id="clean_alert">
+                        <button type="button" class="close" data-dismiss="modal">&times;</button>
+                        <p><h4 class="alert-heading">Default Folders</h4></p>
+
+                        <form class="form-horizontal">
+                            <div class="form-group">
+                            <label class="control-label col-xs-3">All / Links : </label>
+                            <div class="col-xs-9">
+                              <select class="default_folder_list form-control" id="folder_id_all">
+                            </select>
+                            </div>
+                          </div>
+                          <div class="form-group">
+                            <label class="control-label col-xs-3">Movies : </label>
+                            <div class="col-xs-9">
+                              <select class="default_folder_list form-control" id="folder_id_movies">
+                            </select>
+                            </div>
+                          </div>
+                          <div class="form-group">
+                            <label class="control-label col-xs-3">TV Shows : </label>
+                            <div class="col-xs-9">
+                              <select class="default_folder_list form-control" id="folder_id_tvshows">
+                            </select>
+                            </div>
+                          </div>
+                          <div class="form-group">
+                            <label class="control-label col-xs-3">Music : </label>
+                            <div class="col-xs-9">
+                              <select class="default_folder_list form-control" id="folder_id_music">
+                            </select>
+                            </div>
+                          </div>
+                          <div class="form-group">
+                            <label class="control-label col-xs-3">Games : </label>
+                            <div class="col-xs-9">
+                              <select class="default_folder_list form-control" id="folder_id_games">
+                            </select>
+                            </div>
+                          </div>
+                          <div class="form-group">
+                            <label class="control-label col-xs-3">Applications : </label>
+                            <div class="col-xs-9">
+                              <select class="default_folder_list form-control" id="folder_id_applications">
+                            </select>
+                            </div>
+                          </div>
+                        </form>
+                        <p>
+                          <a class="btn btn-primary yes" type="default_folder" href="#">Save</a> <a class="btn btn-default" href="#" data-dismiss="modal">Cancel</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="defaultSubtitleSelectModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="alert alert-block alert-info fade in " id="clean_alert">
+                        <button type="button" class="close" data-dismiss="modal">&times;</button>
+                        <p><h4 class="alert-heading">Default Subtitle in</h4></p>
+                        <p>
+                            <select id="subtitle_code" class="form-control">
+                            </select>
+                        </p>
+                        <p>
+                          <a class="btn btn-primary yes" type="default_subtitle" href="#">Save</a> <a class="btn btn-default" href="#" data-dismiss="modal">Cancel</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="thumbnail_modal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
         </div>
     </body>
 </html>

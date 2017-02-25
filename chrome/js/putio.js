@@ -19,6 +19,19 @@ Putio = {
             Putio._request('account', 'info','','GET',function(data){
                 output(data);
             });
+        },
+        settings : function(output) {
+            Putio._request('account', 'settings','','GET',function(data){
+                output(data);
+            });
+        },
+        change_route : function(value, output) {
+            var params = {
+                "routing": value,
+            };
+            Putio._request('account', 'settings',params,'POST',function(data){
+                output(data);
+            });
         }
     },
 
@@ -138,6 +151,23 @@ Putio = {
             Putio._request('files', 'get-download-links', params,'POST',function(data){
                 output(data);
             });
+        },
+        zip : function(ids,output) {
+            var params = {
+                'file_ids' : ids
+            };
+            Putio._request('files', 'zip', params,'GET',function(data){
+                output(data);
+            });
+        }
+    },
+
+    Zips : {
+        info : function(id,output) {
+
+            Putio._request('zips', id, '','GET',function(data){
+                output(data);
+            });
         }
     },
 
@@ -195,5 +225,5 @@ Putio = {
             });
         })
 
-}
+    }
 };

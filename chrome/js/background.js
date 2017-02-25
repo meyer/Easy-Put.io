@@ -45,7 +45,7 @@ Background = {
                             'text':''
                         });
                     }
-                        
+
                 });
             }
             else{
@@ -62,7 +62,7 @@ Background = {
     extract_url:function (url){
         lines = url.split("\n");
         magnet_urls = [];
-        txt = '';                    
+        txt = '';
         for (var a=0; a<lines.length; a++){
             if (lines[a].indexOf('magnet:?')>-1){
                 magnet_urls.push(lines[a])
@@ -70,10 +70,10 @@ Background = {
                 txt += lines[a] + "\n";
             }
         }
-        
+
         var regex =  /([\w]+:\/\/[\w-?\+\%&;#~=\.\/\@\:\[\]\(\)\{\}\|]+[\w\/\[\]\(\)\{\}\+])/gi;
         var urls = url.match(regex)
-        
+
         if (!urls && magnet_urls.length == 0){
             var opt = {
               type: "basic",
@@ -81,7 +81,7 @@ Background = {
               message: "Please only enter links starting with: http:// https:// ftp:// or magnet:?",
               iconUrl: 'img/icon128.png'
             }
-            
+
             chrome.notifications.create('',opt,function(notif_id) {
                 setTimeout( function () {
                     chrome.notifications.clear(notif_id, function(data){})
@@ -90,7 +90,7 @@ Background = {
 
             return;
         }
-        
+
         if (!urls){
             urls = [];
         }
@@ -98,14 +98,14 @@ Background = {
         for (var a=0; a<magnet_urls.length; a++){
             urls.push(magnet_urls[a]);
         }
-        
+
         return urls;
     },
 
 
     sendtoputio:function (url, folder_id, from, event){
         var urls=Background.extract_url(url);
-        
+
         if(urls){
             $.each(urls,function(index, value){
                 Putio.Transfers.add(value,folder_id,function(data){
@@ -116,7 +116,7 @@ Background = {
                                 title: data.error_type,
                                 message: data.error_message,
                                 iconUrl: 'img/icon128.png'
-                            } 
+                            }
                         break;
                         case 'OK':
                             var opt = {
@@ -136,7 +136,7 @@ Background = {
                 })
             });
         }
-   
+
     },
 
 
@@ -202,12 +202,18 @@ Background = {
                             Background.start();
                         }, 1000);
                     }
-                    else{ 
+                    else{
+                        if(!localStorage['default_routing']){
+                            Putio.Account.settings(function(data){
+                                localStorage['default_routing'] = data.settings.routing;
+                            })
+                        }
+
                         Background.time_start=setTimeout( function () {
                             Background.start();
                         }, 3600000);
                         clearTimeout(Background.time_notif);
-                        
+
                         if(localStorage["hide_badge"]=="no")
                             Background.badge();
                         else{
@@ -216,7 +222,7 @@ Background = {
                             });
                         }
 
-                        chrome.contextMenus.removeAll()
+                        chrome.contextMenus.removeAll();
                         var contexts = ["selection","link"];
                         var url;
                         var parent_tab_id=chrome.contextMenus.create({
